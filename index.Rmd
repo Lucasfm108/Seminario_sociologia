@@ -1,0 +1,312 @@
+---
+title: Ideologia criminal e decisões judiciais
+subtitle: Como decidem os Juízes do TJSP
+author: Lucas Fernandes de Magalhães
+output: 
+  revealjs::revealjs_presentation:
+    css: styles.css
+    self_contained: false
+    reveal_plugins: ["zoom", "search"]
+    transition: slide
+    background_transition: slide
+    progress: true
+    slideNumber: true
+    reveal_options:
+      width: 100%
+      height: 100%
+---
+
+```{r include=FALSE}
+library(kableExtra)
+```
+
+
+
+# Introdução
+
+## Duas situações, quatro decisões
+
+&nbsp;
+&nbsp;
+
+```{r echo=FALSE}
+a <- data.frame("Caso" = c("Acusado de tráfico. Segundo policiais, o acusado jogou uma sacola no chão contendo drogas às 18hrs. O réu negou e apresentou provas de que havia trabalhado como ajudante de pedreiro até às 17hrs.", "Acusada de tráfico. Segundo policiais, a ré jogou um embrulho no chão contendo drogas. A ré negou e disse que estava apenas no lugar 'errado, na hora errada'.", "Acusado de furto. Furtou um telefone sem fio no valor de R$ 93,00, o qual foi devolvido sem avarias. O réu era reincidente.", "Acusado de furto. Furtou uma mochilha no valor de R$ 119,00, a qual foi devolvida sem avarias. O réu era reincidente"), "Decisão" = c("Condenação", "Absolvição", "Condenação", "Absolvição"))
+
+kable(a) %>%
+  kable_styling("striped", full_width = F) %>%
+  pack_rows("Situação 1", 1, 2) %>%
+  pack_rows("Situação 2", 3, 4)
+
+```
+
+
+## Suposições
+
+&nbsp;
+&nbsp;
+
+O Direito (Leis, jurisprudências e princípios) não determina o resultado dos processos judiciais:
+
+<center> $0<p(Decisão=Condenação|Direito)<1$ </center>
+
+&nbsp;
+&nbsp;
+
+Quando o Direito é ambíguo, há um conjunto de variáveis extrajuríridicas ($Z$) que afetam a decisão judicial, como a ideologia. Assim, quando o direito não termina o resultado dos processos, as decisões não são tomadas de forma aleatória: 
+
+<center> $Decisão \not\perp Z$ </center>
+
+
+# Explicando as decisões judiciais
+
+## Teorias
+
+&nbsp;
+&nbsp;
+
+Teorias devem ser parcimoniosas e falseáveis
+
+&nbsp;
+&nbsp;
+
+Três teorias cumprem esses dois critérios: Teoria do Atitudinalismo Psicológico ou Estímulo-Resposta, Teoria do Atitudinalismo Racional e Teoria dos Múltiplos Objetivos 
+
+## Modelo
+
+&nbsp;
+&nbsp;
+
+As teorias apontam uma série de variáveis explicativas, porém, a maior parte delas não se aplica aos Juízes de 1º Grau decidindo casos criminais no Estado de São Paulo. Resta-nos apenas a ideologia do próprio juiz. Em outras palavras, quando o Direito é
+ambíguo, as decisões dos juízes são, em grande medida, afetadas pelas suas ideologias:
+
+&nbsp;
+&nbsp;
+
+<center> $$\underbrace{d_{ic}}_\text{Decisão do juiz i no caso c} = \alpha + \underbrace{\beta_1I_i}_\text{Ideologia do juiz i} + \underbrace{\beta X_c}_\text{Características do caso c}$$ </center>
+
+
+# Mensurando a ideologia
+
+## Duas estratégias
+
+&nbsp;
+&nbsp;
+
+A ideologia é uma variável latente, isto é, não é passível de ser mensurada diretamente, diferente da altura, sexo ou peso, por exemplo. Em razão disso, para medi-la necessitamos de alternativas indiretas como um survey. O survey, no entanto, se esbarra no problema de que dificilmente o pesquisador irá encontrar juízes dispostos a responder um questionário. A literatura apresenta duas estratégias:
+
+&nbsp;
+&nbsp;
+
+
+* Proxy: Partido do Presidente responsável pela indicação do juiz, por exemplo.
+
+* Comportamento observado: Média das decisões ou estimação de ponto ideal, por exemplo.
+
+
+
+## Estratégia mista
+
+&nbsp;
+&nbsp;
+
+Em um primeiro momento, “extraímos” a ideologia a partir do comportamento observado e, posteriormente, aperfeiçoamos essa variável a partir de proxies da ideologia. 
+
+
+## Ideologia e comportamento observado
+
+```{r include=FALSE}
+library(tidyverse)
+library(plotly)
+library(rgdal)
+library(jtools)
+library(broom)
+library(data.table)
+
+load("base_app.rda")
+map_com <- readOGR("map_com.shp", use_iconv=TRUE, encoding="UTF-8")
+```
+
+&nbsp;
+&nbsp;
+
+Em primeiro lugar, calculamos a média da taxa de condenação dos juízes em três crimes: furto, roubo e receptação
+
+
+```{r echo=FALSE}
+base <- base %>% mutate(prescricao=ifelse(extinta_pun==1 & #Classificar como prescrição aqueles que extinguiram a punibilidade por prescricao sem ser virtual ou em perspectiva
+                                            virtual==0 &
+                                            prescricao==1,
+                                          1,0)) 
+
+base_reg <- base %>% group_by(Magistrado_ID, Comarca, Assunto) %>%
+  summarise("Condena" = sum(procedente)/
+              (sum(procedente)+ sum(improcedente)+
+                 sum(extinta_pun)),
+            "Total" = sum(procedente) +
+              sum(improcedente)+
+              sum(extinta_pun),
+            "prescricao"= sum(prescricao)/
+              (sum(procedente)+ sum(improcedente)+
+                 sum(extinta_pun))) %>%
+  filter(Total>30) %>% select(-Total) %>%
+  ungroup()
+
+base_reg <- as.data.table(base_reg)
+
+base_reg <- dcast(base_reg, 
+                  Magistrado_ID+ Comarca ~Assunto,
+                  value.var=c("Condena", "prescricao"))
+
+
+#######################
+###Medindo ideologia###
+#######################
+
+#############
+###1 Etapa###
+#############
+
+#Calcula a media de condenacao dos crimes de roubo, furto e receptacao
+
+med_cond <- base_reg %>% summarise(med_furto=mean(Condena_furto, na.rm=T),
+                                   med_roubo=mean(Condena_roubo, na.rm=T),
+                                   med_receptacao=mean(Condena_receptação, na.rm=T))
+
+
+#Separa a base com os juizes que julgaram os tres crimes
+base_ideo <- base_reg %>% select(1,2,Condena_furto, Condena_receptação, 
+                                 Condena_roubo) %>% drop_na()
+
+base_ideo <- base_ideo %>% select(1,3,4,5)
+head(base_ideo, n=10)
+```
+
+## Independência jurídica entre os crimes
+
+&nbsp;
+&nbsp;
+
+Antes de avançar nesta primeira etapa, precisamos estabelecer uma suposição de independência jurídica entre os crimes. Isso significa, em termos legais, que as taxas de condenações de um juiz em diversos crimes não são correlacionadas. Seja $TC_{ij}$ a taxa de condenação do juiz i no crime j:
+
+&nbsp;
+&nbsp;
+
+<center> $TC_{i1} \perp TC_{i2}$ </center>
+
+
+## Ideologia e comportamento observado
+
+&nbsp;
+&nbsp;
+
+Dessa maneira, se houver, contraintuitivamente, uma correlação entre as taxas de condenação dos diversos crimes, isso significa que ela não decorre do Direito, mas sim da ideologia dos juízes
+
+A suposição da Independência Jurídica entre os Crimes nos permite, portanto, pensar em maneiras de criar uma variável de ideologia a partir da correlação existente entre as taxas de condenação
+
+## Ideologia e comportamento observado 
+
+&nbsp;
+&nbsp;
+
+
+$$I_i =
+  \begin{cases}
+    TC_{i1} > \overline{TC_1}, TC_{i2} > \overline{TC_2}, TC_{i3} > \overline{TC_3}  & \quad I_i = 1\\
+    TC_{i1} > \overline{TC_1}, TC_{i2} > \overline{TC_2}|TC_{i2} > \overline{TC_2}, TC_{i3} > \overline{TC_3}|TC_{i1} > \overline{TC_1}, TC_{i3} > \overline{TC_3}  & \quad I_i = 0.75\\
+    TC_{i1} < \overline{TC_1}, TC_{i2} < \overline{TC_2}|TC_{i2} < \overline{TC_2}, TC_{i3} < \overline{TC_3}|TC_{i1} < \overline{TC_1}, TC_{i3} < \overline{TC_3}  & \quad I_i = 0.25\\
+    TC_{i1} < \overline{TC_1}, TC_{i2} < \overline{TC_2}, TC_{i3} < \overline{TC_3}  & \quad I = 0\\
+  \end{cases}$$
+
+
+## Regressão e proxies
+
+&nbsp;
+&nbsp;
+
+Após criada a variável I a partir do comportamento observado, passamos para a segunda etapa da metodologia. Nessa etapa, utilizamos a variável recém-criada como dependente em um modelo de regressão, tomando como independentes um conjunto de variáveis $K$ que, teoricamente, afetam a própria ideologia:
+
+&nbsp;
+&nbsp;
+
+<center> $I= \alpha + \beta K$ </center>
+
+&nbsp;
+&nbsp;
+
+Após rodar essa regressão, os valores preditos de I, isto é, $\hat{I}$ serão considerados os valores das ideologias dos juízes.
+
+# Análise exploratória
+
+## Série temporal: condenação por tipo de crime
+
+```{r include=FALSE}
+library(highcharter)
+load("base_agg.rda") #Base para gráficos das séries temporais das taxas de condenação
+load("base_dif.rda") #Base para histograma e diferença dos anos
+load("cor_matrix.rda") #Matrix de correlação
+```
+
+```{r include=FALSE}
+p1 <-  hchart(x,'line', hcaes(x = 'Data', y = 'Condena', group = "Assunto"))%>% 
+      hc_legend(enabled = T)
+```
+
+```{r echo=FALSE}
+p1
+```
+
+## Histograma: Diferença da taxa de condenação por ano
+
+```{r echo=FALSE}
+hchart(base_dif$dif, showInLegend=F) %>% 
+  hc_xAxis(title=list(text="Diferença das taxas de condenação por ano"),
+           plotLines=list(list(
+             value = mean(base_dif$dif),
+             color = '#ff0000',
+             width = 1,
+             zIndex = 4,
+             dashStyle="Dash",
+             label = list(text = "Média",
+                          style = list( color = '#ff0000',
+                                        fontWeight = 'bold')
+             )))) %>% 
+  hc_yAxis(title=list(text="Nº de Magistrados"))
+```
+
+
+
+## Histograma: Taxa média de condenação
+
+
+```{r echo=FALSE}
+hchart(base_dif$Condena, showInLegend=F) %>% 
+  hc_xAxis(title=list(text="Taxa de condenação"),
+           plotLines=list(list(
+             value = mean(base_dif$Condena),
+             color = '#ff0000',
+             width = 1,
+             zIndex = 4,
+             dashStyle="Dash",
+             label = list(text = "Média",
+                          style = list( color = '#ff0000',
+                                        fontWeight = 'bold')
+             )))) %>% 
+  hc_yAxis(title=list(text="Nº de Magistrados"))
+```
+
+## Matrix de correlação
+
+```{r echo=FALSE}
+cor_colr <- list( list(0, '#FF5733'),
+                  list(0.5, '#F8F5F5'),
+                  list(1, '#2E86C1'))
+
+hchart(cor_matrix)%>% 
+  hc_colorAxis(stops= cor_colr,min=-1,max=1)%>% 
+  hc_plotOptions(
+    series = list(
+      boderWidth = 0,
+      dataLabels = list(enabled = TRUE)
+    ))
+```
+
