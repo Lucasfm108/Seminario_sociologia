@@ -223,12 +223,12 @@ $$I_i =
 &nbsp;
 &nbsp;
 
-Após criada a variável I a partir do comportamento observado, passamos para a segunda etapa da metodologia. Nessa etapa, utilizamos a variável recém-criada como dependente em um modelo de regressão, tomando como independentes um conjunto de variáveis $K$ que, teoricamente, afetam a própria ideologia:
+Após criada a variável I a partir do comportamento observado, passamos para a segunda etapa da metodologia. Nessa etapa, utilizamos a variável recém-criada como dependente em um modelo de regressão, tomando como independentes um conjunto de variáveis $K = (K_1, K_2,...,K_n)$ que, teoricamente, afetam a própria ideologia:
 
 &nbsp;
 &nbsp;
 
-<center> $I= \alpha + \beta K$ </center>
+<center> $I= \alpha + \displaystyle\sum_{j=1}^{n} \beta_j K_j$ </center>
 
 &nbsp;
 &nbsp;
