@@ -52,7 +52,7 @@ O Direito (Leis, jurisprudências e princípios) não determina o resultado dos 
 &nbsp;
 &nbsp;
 
-Quando o Direito é ambíguo, há um conjunto de variáveis extrajuríridicas ($Z$) que afetam a decisão judicial, como a ideologia. Assim, quando o direito não termina o resultado dos processos, as decisões não são tomadas de forma aleatória: 
+Quando o Direito é ambíguo, há um conjunto de variáveis extrajuríridicas ($Z$) que afetam a decisão judicial, como a ideologia. 
 
 <center> $Decisão \not\perp Z$ </center>
 
